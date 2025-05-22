@@ -41,7 +41,7 @@ VALIDATE $? "Enabling Nodejs 20 "
 dnf install nodejs -y &>>$LOG_FILE
 VALIDATE $? "Installing Nodejs"
 
-useradd --system --home /app --shell /sbin/nologin --comment"Roboshop user" roboshop &>>$LOG_FILE
+useradd --system --home /app --shell /sbin/nologin --comment "Roboshop user" roboshop &>>$LOG_FILE
 VALIDATE $? "Adding system user roboshop"
 mkdir /app
 VALIDATE $? "Creating a Directory"
@@ -62,7 +62,7 @@ systemctl enable catalogue &>>$LOG_FILE
 VALIDATE $? "Catalogue enable"
 
 cp $SCRIPT_DIR/mongo.repo /etc/yum.repos.d/mongo.repo
-dnf install mongodb-mogosh -y &>>$LOG_FILE
+dnf install mongodb-mongosh -y &>>$LOG_FILE
 VALIDATE $? "Installing mongodb client"
 
 mongosh --host mongodb.vkdevops.site </app/db/master-data.js &>>$LOG_FILE
