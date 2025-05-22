@@ -68,12 +68,11 @@ systemctl enable catalogue &>>$LOG_FILE
 VALIDATE $? "Catalogue enable"
 
 cp $SCRIPT_DIR/mongo.repo /etc/yum.repos.d/mongo.repo
+dnf install mongodb-mongosh -y &>>$LOG_FILE
+VALIDATE $? "Installing mongodb client"
 STATUS=$(mongosh --host mongodb.daws84s.site --eval 'db.getMongo().getDBNames().indexOf("catalogue")')
 if [ $STATUS -lt 0 ]
 then
-    dnf install mongodb-mongosh -y &>>$LOG_FILE
-    VALIDATE $? "Installing mongodb client"
-
     mongosh --host mongodb.vkdevops.site </app/db/master-data.js &>>$LOG_FILE
     VALIDATE $? "Loading Data"
 else
