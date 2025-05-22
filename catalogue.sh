@@ -40,15 +40,21 @@ dnf module enable nodejs:20 -y &>>$LOG_FILE
 VALIDATE $? "Enabling Nodejs 20 "
 dnf install nodejs -y &>>$LOG_FILE
 VALIDATE $? "Installing Nodejs"
-
-useradd --system --home /app --shell /sbin/nologin --comment "Roboshop user" roboshop &>>$LOG_FILE
-VALIDATE $? "Adding system user roboshop"
-mkdir /app
+id roboshop
+if [ $? -ne 0 ]
+then
+    useradd --system --home /app --shell /sbin/nologin --comment "Roboshop user" roboshop &>>$LOG_FILE
+    VALIDATE $? "Adding system user roboshop"
+else
+    echo -e "Roboshop user already exists $Y Skipping $N"
+fi
+mkdir -p /app
 VALIDATE $? "Creating a Directory"
 
 curl -o /tmp/catalogue.zip https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip  &>>$LOG_FILE
 VALIDATE $? "Downloading the Zip file in Temp directory"
 cd /app
+rm -rf /app/*
 unzip /tmp/catalogue.zip &>>$LOG_FILE
 VALIDATE $? "Unzipping Catalogue"
 npm install &>>$LOG_FILE
@@ -62,7 +68,16 @@ systemctl enable catalogue &>>$LOG_FILE
 VALIDATE $? "Catalogue enable"
 
 cp $SCRIPT_DIR/mongo.repo /etc/yum.repos.d/mongo.repo
-dnf install mongodb-mongosh -y &>>$LOG_FILE
-VALIDATE $? "Installing mongodb client"
+STATUS=$(mongosh --host mongodb.daws84s.site --eval 'db.getMongo().getDBNames().indexOf("catalogue")')
+if [ $STATUS -lt 0 ]
+then
+    dnf install mongodb-mongosh -y &>>$LOG_FILE
+    VALIDATE $? "Installing mongodb client"
 
-mongosh --host mongodb.vkdevops.site </app/db/master-data.js &>>$LOG_FILE
+    mongosh --host mongodb.vkdevops.site </app/db/master-data.js &>>$LOG_FILE
+    VALIDATE $? "Loading Data"
+else
+    echo -e "$Y Skipping loading of data and installing monogdb client $N"
+fi
+
+
