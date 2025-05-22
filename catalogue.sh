@@ -5,71 +5,78 @@ R="\e[31m"
 G="\e[32m"
 Y="\e[33m"
 N="\e[0m"
-LOG_FOLDER="/var/log/roboshop-log"
+LOGS_FOLDER="/var/log/roboshop-logs"
 SCRIPT_NAME=$(echo $0 | cut -d "." -f1)
-LOG_FILE="$LOG_FOLDER/$SCRIPT_NAME.log"
+LOG_FILE="$LOGS_FOLDER/$SCRIPT_NAME.log"
 SCRIPT_DIR=$PWD
 
+mkdir -p $LOGS_FOLDER
+echo "Script started executing at: $(date)" | tee -a $LOG_FILE
 
-mkdir -p $LOG_FOLDER
- 
-echo "The script started execution at $(date)" | tee -a $LOG_FILE
-
-
-
+# check the user has root priveleges or not
 if [ $USERID -ne 0 ]
 then
-    echo -e "$R The user doesnt have root access $N" | tee -a $LOG_FILE
-    exit 1
+    echo -e "$R ERROR:: Please run this script with root access $N" | tee -a $LOG_FILE
+    exit 1 #give other than 0 upto 127
 else
-    echo -e "$G The user has root axit can procceed for installation $N" | tee -a $LOG_FILE
+    echo "You are running with root access" | tee -a $LOG_FILE
 fi
 
+# validate functions takes input as exit status, what command they tried to install
 VALIDATE(){
     if [ $1 -eq 0 ]
     then
-        echo -e "$G $2 is a success $N" | tee -a $LOG_FILE
+        echo -e "$2 is ... $G SUCCESS $N" | tee -a $LOG_FILE
     else
-        echo -e "$R $2 is a failure $N"| tee -a $LOG_FILE
+        echo -e "$2 is ... $R FAILURE $N" | tee -a $LOG_FILE
+        exit 1
     fi
 }
 
 dnf module disable nodejs -y &>>$LOG_FILE
-VALIDATE $? "Disabling Nodejs"
+VALIDATE $? "Disabling default nodejs"
+
 dnf module enable nodejs:20 -y &>>$LOG_FILE
-VALIDATE $? "Enabling Nodejs 20 "
+VALIDATE $? "Enabling nodejs:20"
+
 dnf install nodejs -y &>>$LOG_FILE
-VALIDATE $? "Installing Nodejs"
+VALIDATE $? "Installing nodejs:20"
+
 id roboshop
 if [ $? -ne 0 ]
 then
-    useradd --system --home /app --shell /sbin/nologin --comment "Roboshop user" roboshop &>>$LOG_FILE
-    VALIDATE $? "Adding system user roboshop"
+    useradd --system --home /app --shell /sbin/nologin --comment "roboshop system user" roboshop &>>$LOG_FILE
+    VALIDATE $? "Creating roboshop system user"
 else
-    echo -e "Roboshop user already exists $Y Skipping $N"
+    echo -e "System user roboshop already created ... $Y SKIPPING $N"
 fi
-mkdir -p /app
-VALIDATE $? "Creating a Directory"
 
-curl -o /tmp/catalogue.zip https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip  &>>$LOG_FILE
-VALIDATE $? "Downloading the Zip file in Temp directory"
-cd /app
+mkdir -p /app 
+VALIDATE $? "Creating app directory"
+
+curl -o /tmp/catalogue.zip https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip &>>$LOG_FILE
+VALIDATE $? "Downloading Catalogue"
+
 rm -rf /app/*
+cd /app 
 unzip /tmp/catalogue.zip &>>$LOG_FILE
-VALIDATE $? "Unzipping Catalogue"
-npm install &>>$LOG_FILE
-VALIDATE $? "Installing dependencies"
-cp $SCRIPT_DIR/catalogue.service /etc/systemd/system/catalogue.service
-VALIDATE $? "Setting up system service"
-systemctl daemon-reload
-systemctl start catalogue
-VALIDATE $? "Catalogue start"
-systemctl enable catalogue &>>$LOG_FILE
-VALIDATE $? "Catalogue enable"
+VALIDATE $? "unzipping catalogue"
 
-cp $SCRIPT_DIR/mongo.repo /etc/yum.repos.d/mongo.repo
+npm install &>>$LOG_FILE
+VALIDATE $? "Installing Dependencies"
+
+cp $SCRIPT_DIR/catalogue.service /etc/systemd/system/catalogue.service
+VALIDATE $? "Copying catalogue service"
+
+systemctl daemon-reload &>>$LOG_FILE
+systemctl enable catalogue  &>>$LOG_FILE
+systemctl start catalogue
+VALIDATE $? "Starting Catalogue"
+
+cp $SCRIPT_DIR/mongo.repo /etc/yum.repos.d/mongo.repo 
 dnf install mongodb-mongosh -y &>>$LOG_FILE
-VALIDATE $? "Installing mongodb client"
+VALIDATE $? "Installing MongoDB Client"
+
 STATUS=$(mongosh --host mongodb.daws84s.site --eval 'db.getMongo().getDBNames().indexOf("catalogue")')
 if [ $STATUS -lt 0 ]
 then
@@ -78,5 +85,4 @@ then
 else
     echo -e "Data is already loaded ... $Y SKIPPING $N"
 fi
-
 
