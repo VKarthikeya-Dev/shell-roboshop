@@ -44,13 +44,13 @@ VALIDATE $? "Enabling Redis 7"
 dnf install redis -y &>>$LOG_FILE
 VALIDATE $? "Installing Redis"
 
-systemctl start redis -y
-systemctl enable redis -y &>>$LOG_FILE
+systemctl start redis 
+systemctl enable redis  &>>$LOG_FILE
 VALIDATE $? "Enabling Redis service"
 
 sed -i 's/127.0.0.1/0.0.0.0/g' -e '/protected-mode/ c protected-mode no' /etc/redis/redis.conf
 VALIDATE $? "Changing redis conf"
-systemctl restart redis -y 
+systemctl restart redis 
 VALIDATE $? "Restarting Redis service"
 
 
