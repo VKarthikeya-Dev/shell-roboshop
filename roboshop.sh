@@ -17,7 +17,7 @@ do
     else
         IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[*].Instances[*].PublicIpAddress'  --output text)
         echo "$instance public ip is $IP"
-        RECORD_NAME="$DOMAIN_NAME"
+        RECORD_NAME="$DOMAIN_NAME.$DOMAIN_NAME"
     fi
     aws route53 change-resource-record-sets \
   --hosted-zone-id Z071068523JSF1PW7XXII \
